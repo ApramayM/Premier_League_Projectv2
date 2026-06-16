@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../../lib/supabase/server';
 
+export const dynamic = 'force-dynamic';
+
 function oddsForPick(market, pick) {
   if (pick === 'home') return market.best_home_odds;
   if (pick === 'draw') return market.best_draw_odds;
