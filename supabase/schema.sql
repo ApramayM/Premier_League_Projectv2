@@ -3,9 +3,12 @@ create extension if not exists pgcrypto;
 create table if not exists public.profiles (
   id uuid primary key default gen_random_uuid(),
   display_name text not null,
+  access_code text unique,
   balance numeric(12,2) not null default 100.00,
   created_at timestamptz not null default now()
 );
+
+alter table public.profiles add column if not exists access_code text unique;
 
 create table if not exists public.fixtures (
   id text primary key,
@@ -84,31 +87,15 @@ alter table public.odds_snapshots enable row level security;
 alter table public.predictions enable row level security;
 alter table public.provider_checks enable row level security;
 
-do $$ begin
-  create policy "profiles are readable" on public.profiles for select using (true);
-exception when duplicate_object then null; end $$;
-
-do $$ begin
-  create policy "profiles can be created" on public.profiles for insert with check (true);
-exception when duplicate_object then null; end $$;
-
-do $$ begin
-  create policy "fixtures are readable" on public.fixtures for select using (true);
-exception when duplicate_object then null; end $$;
-
-do $$ begin
-  create policy "markets are readable" on public.markets for select using (true);
-exception when duplicate_object then null; end $$;
-
-do $$ begin
-  create policy "provider checks are readable" on public.provider_checks for select using (true);
-exception when duplicate_object then null; end $$;
-
-do $$ begin
-  create policy "predictions are readable" on public.predictions for select using (true);
-exception when duplicate_object then null; end $$;
+do $$ begin create policy "profiles are readable" on public.profiles for select using (true); exception when duplicate_object then null; end $$;
+do $$ begin create policy "profiles can be created" on public.profiles for insert with check (true); exception when duplicate_object then null; end $$;
+do $$ begin create policy "fixtures are readable" on public.fixtures for select using (true); exception when duplicate_object then null; end $$;
+do $$ begin create policy "markets are readable" on public.markets for select using (true); exception when duplicate_object then null; end $$;
+do $$ begin create policy "provider checks are readable" on public.provider_checks for select using (true); exception when duplicate_object then null; end $$;
+do $$ begin create policy "predictions are readable" on public.predictions for select using (true); exception when duplicate_object then null; end $$;
 
 create index if not exists fixtures_kickoff_idx on public.fixtures(kickoff);
 create index if not exists markets_kickoff_idx on public.markets(kickoff);
 create index if not exists predictions_profile_idx on public.predictions(profile_id);
+create index if not exists profiles_access_code_idx on public.profiles(access_code);
 create index if not exists odds_snapshots_market_idx on public.odds_snapshots(market_id, created_at desc);
