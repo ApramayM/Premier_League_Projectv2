@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Activity, CircleDollarSign, Clock3, Database, RefreshCw, Trophy, Wallet } from "lucide-react";
 
+const DEMO_LEDGER_KEY = "puntlite.demoLedger";
+
 function money(value) {
   return `$${Number(value || 0).toFixed(2)}`;
 }
@@ -35,6 +37,22 @@ async function api(path, options = {}) {
   return payload;
 }
 
+function readDemoLedger() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(DEMO_LEDGER_KEY) || "{}");
+    return {
+      balance: Number.isFinite(parsed.balance) ? parsed.balance : 100,
+      predictions: Array.isArray(parsed.predictions) ? parsed.predictions : [],
+    };
+  } catch {
+    return { balance: 100, predictions: [] };
+  }
+}
+
+function writeDemoLedger(ledger) {
+  localStorage.setItem(DEMO_LEDGER_KEY, JSON.stringify(ledger));
+}
+
 export default function Home() {
   const [profile, setProfile] = useState(null);
   const [markets, setMarkets] = useState([]);
@@ -46,6 +64,7 @@ export default function Home() {
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [demoMode, setDemoMode] = useState(false);
 
   const openPredictions = useMemo(
     () => predictions.filter((prediction) => prediction.status === "locked"),
@@ -54,15 +73,22 @@ export default function Home() {
 
   async function load(existingProfile = profile) {
     setLoading(true);
-    const [health, marketPayload, predictionPayload] = await Promise.all([
+    const [health, marketPayload] = await Promise.all([
       api("/api/health"),
       api("/api/markets"),
-      existingProfile ? api(`/api/predictions?profileId=${existingProfile.id}`) : Promise.resolve({ predictions: [], balance: 100 }),
     ]);
+    const usingDemo = Boolean(health.demo || marketPayload.demo || existingProfile?.local);
+    const predictionPayload =
+      existingProfile && !usingDemo
+        ? await api(`/api/predictions?profileId=${existingProfile.id}`)
+        : existingProfile
+          ? readDemoLedger()
+          : { predictions: [], balance: 100 };
     setChecks(health.checks || []);
     setMarkets(marketPayload.markets || []);
     setPredictions(predictionPayload.predictions || []);
     setBalance(predictionPayload.balance ?? 100);
+    setDemoMode(usingDemo);
     setMessage(health.warning || marketPayload.warning || "");
     setLoading(false);
   }
@@ -74,6 +100,9 @@ export default function Home() {
       body: JSON.stringify({ displayName: name || "Guest" }),
     });
     localStorage.setItem("puntlite.profile", JSON.stringify(payload.profile));
+    if (payload.profile.local && !localStorage.getItem(DEMO_LEDGER_KEY)) {
+      writeDemoLedger({ balance: 100, predictions: [] });
+    }
     setProfile(payload.profile);
     await load(payload.profile);
   }
@@ -81,6 +110,32 @@ export default function Home() {
   async function lock(market, pick) {
     if (!profile) {
       setMessage("Enter a name first.");
+      return;
+    }
+    if (profile.local || demoMode) {
+      if (balance < stake) {
+        setMessage("Insufficient balance.");
+        return;
+      }
+      const prediction = {
+        id: `local-prediction-${Date.now()}`,
+        market_id: market.id,
+        markets: { home_team: market.home_team, away_team: market.away_team, kickoff: market.kickoff },
+        pick,
+        stake,
+        locked_odds: Number(oddsFor(market, pick)),
+        status: "locked",
+        locked_at: new Date().toISOString(),
+        local: true,
+      };
+      const nextLedger = {
+        balance: Number((balance - stake).toFixed(2)),
+        predictions: [prediction, ...predictions],
+      };
+      writeDemoLedger(nextLedger);
+      setBalance(nextLedger.balance);
+      setPredictions(nextLedger.predictions);
+      setMessage(`${label(market, pick)} locked at ${Number(prediction.locked_odds).toFixed(2)}.`);
       return;
     }
     const payload = await api("/api/predictions/lock", {
@@ -125,7 +180,7 @@ export default function Home() {
         <p>Invite friends, lock picks at live bookmaker odds, and settle automatically from official fixture results.</p>
         <div className="statusPill">
           <Activity size={15} />
-          {loading ? "Checking live APIs" : "Live API surface ready"}
+          {loading ? "Checking live APIs" : demoMode ? "Demo markets ready" : "Live API surface ready"}
         </div>
       </section>
 
