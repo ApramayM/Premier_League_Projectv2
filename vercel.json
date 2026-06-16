@@ -2,8 +2,8 @@
   "installCommand": "npm install",
   "buildCommand": "npm run build",
   "crons": [
-    { "path": "/api/sync/fixtures", "schedule": "0 */6 * * *" },
-    { "path": "/api/sync/odds", "schedule": "0 * * * *" },
-    { "path": "/api/settle", "schedule": "30 * * * *" }
+    { "path": "/api/sync/fixtures", "schedule": "0 2 * * *" },
+    { "path": "/api/sync/odds", "schedule": "0 3 * * *" },
+    { "path": "/api/settle", "schedule": "0 4 * * *" }
   ]
 }
