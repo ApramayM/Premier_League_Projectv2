@@ -84,12 +84,29 @@ alter table public.odds_snapshots enable row level security;
 alter table public.predictions enable row level security;
 alter table public.provider_checks enable row level security;
 
-create policy if not exists "profiles are readable" on public.profiles for select using (true);
-create policy if not exists "profiles can be created" on public.profiles for insert with check (true);
-create policy if not exists "fixtures are readable" on public.fixtures for select using (true);
-create policy if not exists "markets are readable" on public.markets for select using (true);
-create policy if not exists "provider checks are readable" on public.provider_checks for select using (true);
-create policy if not exists "predictions are readable" on public.predictions for select using (true);
+do $$ begin
+  create policy "profiles are readable" on public.profiles for select using (true);
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy "profiles can be created" on public.profiles for insert with check (true);
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy "fixtures are readable" on public.fixtures for select using (true);
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy "markets are readable" on public.markets for select using (true);
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy "provider checks are readable" on public.provider_checks for select using (true);
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy "predictions are readable" on public.predictions for select using (true);
+exception when duplicate_object then null; end $$;
 
 create index if not exists fixtures_kickoff_idx on public.fixtures(kickoff);
 create index if not exists markets_kickoff_idx on public.markets(kickoff);
