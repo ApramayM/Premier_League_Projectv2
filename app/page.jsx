@@ -65,11 +65,17 @@ export default function Home() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [demoMode, setDemoMode] = useState(false);
+  const [pendingPick, setPendingPick] = useState(null);
 
   const openPredictions = useMemo(
     () => predictions.filter((prediction) => prediction.status === "locked"),
     [predictions]
   );
+  const maxStake = useMemo(() => Math.max(0.01, Number((balance * 0.1).toFixed(2))), [balance]);
+
+  function clampStake(value) {
+    return Math.min(Math.max(Number(value) || 0.01, 0.01), maxStake);
+  }
 
   async function load(existingProfile = profile) {
     setLoading(true);
@@ -107,13 +113,27 @@ export default function Home() {
     await load(payload.profile);
   }
 
-  async function lock(market, pick) {
+  function stagePick(market, pick) {
     if (!profile) {
       setMessage("Enter a name first.");
       return;
     }
+    setStake((value) => clampStake(value));
+    setPendingPick({ market, pick });
+    setMessage("");
+  }
+
+  async function savePendingPick() {
+    if (!pendingPick) return;
+    const { market, pick } = pendingPick;
+    if (!profile) {
+      setMessage("Enter a name first.");
+      return;
+    }
+    const stakeToSave = clampStake(stake);
+    if (stake !== stakeToSave) setStake(stakeToSave);
     if (profile.local || demoMode) {
-      if (balance < stake) {
+      if (balance < stakeToSave) {
         setMessage("Insufficient balance.");
         return;
       }
@@ -122,28 +142,30 @@ export default function Home() {
         market_id: market.id,
         markets: { home_team: market.home_team, away_team: market.away_team, kickoff: market.kickoff },
         pick,
-        stake,
+        stake: stakeToSave,
         locked_odds: Number(oddsFor(market, pick)),
         status: "locked",
         locked_at: new Date().toISOString(),
         local: true,
       };
       const nextLedger = {
-        balance: Number((balance - stake).toFixed(2)),
+        balance: Number((balance - stakeToSave).toFixed(2)),
         predictions: [prediction, ...predictions],
       };
       writeDemoLedger(nextLedger);
       setBalance(nextLedger.balance);
       setPredictions(nextLedger.predictions);
       setMessage(`${label(market, pick)} locked at ${Number(prediction.locked_odds).toFixed(2)}.`);
+      setPendingPick(null);
       return;
     }
     const payload = await api("/api/predictions/lock", {
       method: "POST",
-      body: JSON.stringify({ profileId: profile.id, marketId: market.id, pick, stake }),
+      body: JSON.stringify({ profileId: profile.id, marketId: market.id, pick, stake: stakeToSave }),
     });
     setBalance(payload.balance);
     setMessage(`${label(market, pick)} locked at ${Number(payload.prediction.locked_odds).toFixed(2)}.`);
+    setPendingPick(null);
     await load(profile);
   }
 
@@ -228,9 +250,30 @@ export default function Home() {
       {tab === "markets" && (
         <section className="list">
           <label className="stakeControl">
-            Stake unit
-            <input type="number" min="1" max="25" value={stake} onChange={(event) => setStake(Math.min(Math.max(Number(event.target.value) || 1, 1), 25))} />
+            Stake unit - max {money(maxStake)}
+            <input
+              type="number"
+              min="0.01"
+              max={maxStake}
+              step="0.01"
+              value={stake}
+              onChange={(event) => setStake(clampStake(event.target.value))}
+            />
           </label>
+          {pendingPick && (
+            <section className="confirmPanel">
+              <div>
+                <strong>Confirm prediction</strong>
+                <span>
+                  {label(pendingPick.market, pendingPick.pick)} at {Number(oddsFor(pendingPick.market, pendingPick.pick)).toFixed(2)} for {money(clampStake(stake))}
+                </span>
+              </div>
+              <div>
+                <button type="button" className="secondaryAction" onClick={() => setPendingPick(null)}>Cancel</button>
+                <button type="button" onClick={savePendingPick}>Save prediction</button>
+              </div>
+            </section>
+          )}
           {markets.length === 0 && <p className="empty">No markets yet. Run the fixture and odds sync jobs after deployment.</p>}
           {markets.map((market) => (
             <article className="marketCard" key={market.id}>
@@ -245,7 +288,7 @@ export default function Home() {
               </div>
               <div className="oddsGrid">
                 {["home", "draw", "away"].map((pick) => (
-                  <button key={pick} disabled={market.status !== "open" || !oddsFor(market, pick)} onClick={() => lock(market, pick)}>
+                  <button key={pick} disabled={market.status !== "open" || !oddsFor(market, pick)} onClick={() => stagePick(market, pick)}>
                     <span>{label(market, pick)}</span>
                     <strong>{Number(oddsFor(market, pick) || 0).toFixed(2)}</strong>
                   </button>
