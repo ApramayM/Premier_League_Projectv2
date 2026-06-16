@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireCronSecret } from '../../../lib/auth/cron';
-import { supabaseAdmin } from '../../../lib/supabase/server';
+import { hasSupabaseConfig, supabaseAdmin } from '../../../lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,6 +15,9 @@ function sameMatch(fixture, market) {
 export async function GET(request) {
   const denied = requireCronSecret(request);
   if (denied) return denied;
+  if (!hasSupabaseConfig()) {
+    return NextResponse.json({ error: 'Supabase environment variables are not configured.' }, { status: 503 });
+  }
   const supabase = supabaseAdmin();
   const { data: finals, error: finalError } = await supabase.from('fixtures').select('*').eq('status', 'final').not('outcome', 'is', null);
   if (finalError) return NextResponse.json({ error: finalError.message }, { status: 500 });
