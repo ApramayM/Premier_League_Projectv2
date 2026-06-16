@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { requireCronSecret } from '../../../lib/auth/cron';
 import { supabaseAdmin } from '../../../lib/supabase/server';
 
+export const dynamic = 'force-dynamic';
+
 function sameMatch(fixture, market) {
   const teamsMatch = fixture.home_team === market.home_team && fixture.away_team === market.away_team;
   if (!teamsMatch) return false;
