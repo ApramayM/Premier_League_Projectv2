@@ -1,13 +1,16 @@
 import { NextResponse } from 'next/server';
 import { requireCronSecret } from '../../../../lib/auth/cron';
 import { fetchWorldCupFixtures, normalizeFixtures } from '../../../../lib/providers/apiFootball';
-import { supabaseAdmin } from '../../../../lib/supabase/server';
+import { hasSupabaseConfig, supabaseAdmin } from '../../../../lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
   const denied = requireCronSecret(request);
   if (denied) return denied;
+  if (!hasSupabaseConfig()) {
+    return NextResponse.json({ error: 'Supabase environment variables are not configured.' }, { status: 503 });
+  }
   const supabase = supabaseAdmin();
   const result = await fetchWorldCupFixtures();
   const fixtures = result.ok ? normalizeFixtures(result.payload) : [];
