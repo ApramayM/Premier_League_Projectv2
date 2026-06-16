@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '../../../lib/supabase/server';
+import { hasSupabaseConfig, supabaseAdmin } from '../../../lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
   const profileId = new URL(request.url).searchParams.get('profileId');
   if (!profileId) return NextResponse.json({ predictions: [], balance: 100 });
+  if (!hasSupabaseConfig()) {
+    return NextResponse.json(
+      { error: 'Supabase environment variables are not configured.', predictions: [], balance: 100 },
+      { status: 503 }
+    );
+  }
   const supabase = supabaseAdmin();
   const [{ data: profile }, { data: predictions, error }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', profileId).single(),
