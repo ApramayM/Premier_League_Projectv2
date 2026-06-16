@@ -1,0 +1,15 @@
+name: Daily World Cup Refresh
+
+on:
+  schedule:
+    - cron: '0 17 * * *'
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call PuntLite daily refresh
+        run: |
+          curl --fail --show-error --silent \
+            "${{ secrets.PUNTLITE_BASE_URL }}/api/cron/daily?secret=${{ secrets.CRON_SECRET }}"
