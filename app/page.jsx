@@ -25,7 +25,12 @@ async function api(path, options = {}) {
     headers: { "content-type": "application/json", ...(options.headers || {}) },
   });
   const text = await response.text();
-  const payload = text ? JSON.parse(text) : {};
+  let payload = {};
+  try {
+    payload = text ? JSON.parse(text) : {};
+  } catch {
+    payload = { error: text || "Empty response from server." };
+  }
   if (!response.ok) throw new Error(payload.error || "Request failed");
   return payload;
 }
