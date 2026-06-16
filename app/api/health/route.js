@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { fallbackChecks } from '../../../lib/fallback/markets';
 import { hasSupabaseConfig, supabaseAdmin } from '../../../lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -7,10 +8,10 @@ export async function GET() {
   if (!hasSupabaseConfig()) {
     return NextResponse.json({
       ok: true,
-      mode: 'world-cup-live',
+      mode: 'demo-fallback',
       timestamp: new Date().toISOString(),
-      checks: [],
-      warning: 'Supabase environment variables are not configured.',
+      checks: fallbackChecks(),
+      demo: true,
     });
   }
 
