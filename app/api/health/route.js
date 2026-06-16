@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../lib/supabase/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const supabase = supabaseAdmin();
   const { data } = await supabase.from('provider_checks').select('*').order('checked_at', { ascending: false }).limit(6);
