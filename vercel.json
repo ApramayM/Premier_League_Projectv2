@@ -1,0 +1,7 @@
+{
+  "crons": [
+    { "path": "/api/sync/fixtures", "schedule": "*/30 * * * *" },
+    { "path": "/api/sync/odds", "schedule": "*/15 * * * *" },
+    { "path": "/api/settle", "schedule": "*/20 * * * *" }
+  ]
+}
