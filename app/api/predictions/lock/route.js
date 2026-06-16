@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { fallbackMarketById } from '../../../../lib/fallback/markets';
 import { hasSupabaseConfig, supabaseAdmin } from '../../../../lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -11,14 +12,36 @@ function oddsForPick(market, pick) {
 }
 
 export async function POST(request) {
-  if (!hasSupabaseConfig()) {
-    return NextResponse.json({ error: 'Supabase environment variables are not configured.' }, { status: 503 });
-  }
   const body = await request.json().catch(() => ({}));
   const { profileId, marketId, pick } = body;
   const stake = Number(body.stake || 1);
   if (!profileId || !marketId || !['home', 'draw', 'away'].includes(pick)) return NextResponse.json({ error: 'Missing profile, market, or pick.' }, { status: 400 });
   if (!Number.isFinite(stake) || stake <= 0 || stake > 25) return NextResponse.json({ error: 'Stake must be between 1 and 25.' }, { status: 400 });
+  if (!hasSupabaseConfig()) {
+    const market = fallbackMarketById(marketId);
+    if (!market || market.status !== 'open') return NextResponse.json({ error: 'Market is not open.' }, { status: 409 });
+    const lockedOdds = Number(oddsForPick(market, pick));
+    if (!lockedOdds) return NextResponse.json({ error: 'Odds are unavailable for this pick.' }, { status: 409 });
+    return NextResponse.json(
+      {
+        prediction: {
+          id: `local-prediction-${Date.now()}`,
+          profile_id: profileId,
+          market_id: marketId,
+          markets: { home_team: market.home_team, away_team: market.away_team, kickoff: market.kickoff },
+          pick,
+          stake,
+          locked_odds: lockedOdds,
+          status: 'locked',
+          locked_at: new Date().toISOString(),
+          local: true,
+        },
+        balance: Number((100 - stake).toFixed(2)),
+        local: true,
+      },
+      { status: 201 }
+    );
+  }
   const supabase = supabaseAdmin();
   const [{ data: profile }, { data: market }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', profileId).single(),
