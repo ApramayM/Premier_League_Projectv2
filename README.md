@@ -2,6 +2,8 @@
 
 World Cup prediction app for friends. It uses Vercel, Supabase, The Odds API, and API-Football.
 
+Deployment trigger: 2026-06-16 World Cup live app.
+
 ## What is included
 
 - Next.js app for Vercel.
