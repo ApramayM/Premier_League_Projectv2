@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../lib/supabase/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request) {
   const profileId = new URL(request.url).searchParams.get('profileId');
   if (!profileId) return NextResponse.json({ predictions: [], balance: 100 });
