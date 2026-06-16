@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../lib/supabase/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const supabase = supabaseAdmin();
   const { data, error } = await supabase.from('markets').select('*').order('kickoff', { ascending: true }).limit(40);
