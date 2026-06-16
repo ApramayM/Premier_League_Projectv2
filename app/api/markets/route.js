@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { FALLBACK_MARKETS } from '../../../lib/fallback/markets';
 import { hasSupabaseConfig, supabaseAdmin } from '../../../lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -6,8 +7,8 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   if (!hasSupabaseConfig()) {
     return NextResponse.json({
-      markets: [],
-      warning: 'Supabase environment variables are not configured.',
+      markets: FALLBACK_MARKETS,
+      demo: true,
     });
   }
 
