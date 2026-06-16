@@ -3,6 +3,8 @@ import { requireCronSecret } from '../../../../lib/auth/cron';
 import { fetchWorldCupFixtures, normalizeFixtures } from '../../../../lib/providers/apiFootball';
 import { supabaseAdmin } from '../../../../lib/supabase/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request) {
   const denied = requireCronSecret(request);
   if (denied) return denied;
