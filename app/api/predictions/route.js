@@ -7,10 +7,7 @@ export async function GET(request) {
   const profileId = new URL(request.url).searchParams.get('profileId');
   if (!profileId) return NextResponse.json({ predictions: [], balance: 100 });
   if (!hasSupabaseConfig()) {
-    return NextResponse.json(
-      { error: 'Supabase environment variables are not configured.', predictions: [], balance: 100 },
-      { status: 503 }
-    );
+    return NextResponse.json({ predictions: [], balance: 100, local: true });
   }
   const supabase = supabaseAdmin();
   const [{ data: profile }, { data: predictions, error }] = await Promise.all([
